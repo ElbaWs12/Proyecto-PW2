@@ -18,36 +18,35 @@ app.use(express.json());
 
 // --- USUARIOS Y AUTENTICACIÓN (Seguridad) ---
 app.post('/api/users/register', (req, res) => {
-    res.json({ mensaje: "Endpoint listo: Aquí se registrará al cliente y se encriptará su contraseña." });
+    res.json({ mensaje: "SE REGISTRA E INCRIPTA LA CONTRASEÑA" });
 });
 
 app.post('/api/users/login', (req, res) => {
-    res.json({ mensaje: "Endpoint listo: Aquí se validará el acceso y se generará el token de seguridad." });
+    res.json({ mensaje: "ACCESO Y TOKEN DE SEGURIDAD" });
 });
 
 // --- PRODUCTOS (Rendimiento y Catálogo) ---
 app.get('/api/products', (req, res) => {
-    res.json({ mensaje: "Endpoint listo: Aquí se enviará la lista de tenis y ropa al frontend." });
+    res.json({ mensaje: "SE ENVIA AL FRONT EL CATALOGO DE PRODUCTOS" });
 });
 
 app.post('/api/products', (req, res) => {
-    res.json({ mensaje: "Endpoint protegido listo: Aquí el Administrador podrá subir nuevos artículos." });
+    res.json({ mensaje: "EL ADMIN ORGANIZA O SUBE LOS ARTICULOS" });
 });
 
-// --- ORDENES Y CARRITO (Concurrencia e Integridad) ---
 app.post('/api/orders', (req, res) => {
-    res.json({ mensaje: "Endpoint listo: Aquí se procesará el pago, validando el stock (concurrencia) y congelando el precio." });
+    res.json({ mensaje: "SE PROCESA LA COMPRA: VALIDA STOCK O CONGELA PRECIO" });
 });
 
 app.get('/api/orders/history', (req, res) => {
-    res.json({ mensaje: "Endpoint listo: Aquí se devolverá el historial exacto de compras del usuario activo." });
+    res.json({ mensaje: "HISTORIAL DE COMPRAS DEL CLIENTE" });
 });
 
 // --- RECOMENDACIONES ---
 app.get('/api/recommendations', (req, res) => {
-    res.json({ mensaje: "Endpoint listo: Aquí se devolverán los artículos más vendidos o sugeridos." });
+    res.json({ mensaje: "DEVUELVE LOS MAS VENDIDOS O VISTOS." });
 });
 
-// 3. Levantar el servidor
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Servidor corriendo en el puerto ${PORT}`));
+app.listen(PORT, () => console.log(`SERVER ON ${PORT}`));
