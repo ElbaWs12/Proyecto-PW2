@@ -1,71 +1,110 @@
-//Orué 
+// - Orué 
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
-function ProductDetail() {
-  const { id } = useParams(); // Obtenemos el ID de la URL
+function ProductoDetalle() {
+  const { id } = useParams(); // Obtenemos el ID del producto de la URL
+  const navigate = useNavigate();
   const [producto, setProducto] = useState(null);
+  const [cargando, setCargando] = useState(true);
 
+  // 1. Cargar el producto al entrar a la página
   useEffect(() => {
-    fetch(`http://localhost:5000/api/products/${id}`) 
-    .then(res => {
-    if (!res.ok) throw new Error('No se encontró el producto en el servidor');
-    return res.json();
-    })
-    .then(data => setProducto(data))
-    .catch(err => console.error("Error en la petición:", err));
-    }, [id]);
+    fetch(`http://localhost:5000/api/products/${id}`)
+      .then(res => res.json())
+      .then(data => {
+        setProducto(data);
+        setCargando(false);
+      })
+      .catch(err => {
+        console.error("Error al obtener el producto:", err);
+        setCargando(false);
+      });
+  }, [id]);
 
-  if (!producto) return <div className="p-20 text-center">Cargando...</div>;
+  //Función para añadir al carrito
+  const agregarAlCarrito = async () => {
+    const userId = localStorage.getItem('userId');
+    console.log("DEBUG FRONT - Usuario:", userId, "Producto:", id); // 👈 MIRA ESTO
+
+    if (!userId) {
+      alert("Por favor, inicia sesión");
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const respuesta = await fetch('http://localhost:5000/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, productId: id, cantidad: 1 }),
+      });
+
+      const data = await respuesta.json();
+      console.log("Respuesta del servidor:", data); // 👈 MIRA ESTO
+
+      if (respuesta.ok) {
+        alert("¡Añadido!");
+      } else {
+        alert("Error: " + data.mensaje);
+      }
+    } catch (error) {
+      console.error("Error capturado en el front:", error);
+    }
+  };
+
+  if (cargando) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f6f6f6] text-black">
+        <p className="font-bold tracking-widest uppercase text-sm animate-pulse">Cargando producto...</p>
+      </div>
+    );
+  }
+
+  if (!producto) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f6f6f6] text-black">
+        <p className="font-medium text-lg">Producto no encontrado</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-[1200px] mx-auto pt-10 pb-20 px-6 lg:flex lg:gap-12">
+    <div className="min-h-[85vh] bg-white text-black font-sans">
+      <div className="max-w-[1200px] mx-auto px-8 py-16 grid grid-cols-1 md:grid-cols-2 gap-16">
         
-        {/* Columna Izquierda: Imágenes */}
-        <div className="lg:w-[65%]">
-          <div className="bg-[#f6f6f6] aspect-square overflow-hidden rounded-sm">
-            <img 
-              src={producto.imagenUrl} 
-              alt={producto.nombre} 
-              className="w-full h-full object-cover mix-blend-multiply"
-            />
-          </div>
-          {/* Aquí podrías poner más fotos si tuvieras un arreglo de imágenes */}
+        {/* Columna Izquierda: Imagen */}
+        <div className="bg-[#f6f6f6] aspect-[4/5] flex items-center justify-center p-8">
+          <img 
+            src={producto.imagenUrl || 'https://via.placeholder.com/600'} 
+            alt={producto.nombre} 
+            className="w-full h-full object-cover mix-blend-multiply"
+          />
         </div>
 
-        {/* Columna Derecha: Información (Sticky) */}
-        <div className="lg:w-[35%] mt-8 lg:mt-0 lg:sticky lg:top-24 h-fit">
-          <div className="space-y-1 mb-6">
-            <h1 className="text-2xl font-medium uppercase tracking-tight">{producto.nombre}</h1>
-            <p className="text-gray-600">{producto.categoria}</p>
-            <p className="text-lg font-semibold pt-2">${producto.precio}</p>
+        {/* Columna Derecha: Detalles y Botones */}
+        <div className="flex flex-col justify-center space-y-6">
+          <div className="space-y-2">
+            <p className="text-gray-500 font-medium uppercase tracking-widest text-sm">
+              {producto.categoria || 'Calzado'}
+            </p>
+            <h1 className="text-4xl font-black tracking-tighter uppercase">{producto.nombre}</h1>
+            <p className="text-2xl font-medium mt-4">${producto.precio}</p>
           </div>
 
-          <div className="py-6 border-t border-gray-100">
-            <p className="text-sm leading-relaxed text-gray-800">
-              {producto.descripcion || "Diseño innovador con materiales premium para un confort excepcional durante todo el día."}
+          <div className="space-y-4 pt-6">
+            <p className="text-gray-600 leading-relaxed text-sm">
+              {producto.descripcion || 'Una combinación perfecta de estilo y comodidad, ideal para acompañarte en tu día a día con el mejor diseño.'}
             </p>
           </div>
 
-          {/* Botones de acción */}
-          <div className="space-y-3 pt-6">
-            <button className="w-full bg-black text-white py-4 rounded-full font-medium hover:bg-gray-800 transition-colors">
-              Añadir al carrito
+          <div className="pt-8">
+            <button 
+              onClick={agregarAlCarrito}
+              className="w-full bg-black text-white py-5 rounded-full font-bold uppercase tracking-wide text-sm hover:bg-gray-800 transition-colors"
+            >
+              Añadir al Carrito
             </button>
-            <button className="w-full border border-gray-300 py-4 rounded-full font-medium hover:border-black transition-colors">
-              Favorito ♡
-            </button>
-          </div>
-
-          {/* Detalles adicionales estilo acordeón */}
-          <div className="mt-10 pt-6 border-t border-gray-100 text-sm">
-            <details className="cursor-pointer py-4 border-b border-gray-50">
-              <summary className="font-medium list-none flex justify-between">
-                Envío y Devoluciones <span>↓</span>
-              </summary>
-              <p className="pt-2 text-gray-500">Envío estándar gratuito para miembros.</p>
-            </details>
           </div>
         </div>
 
@@ -74,4 +113,4 @@ function ProductDetail() {
   );
 }
 
-export default ProductDetail;
+export default ProductoDetalle;

@@ -8,7 +8,11 @@ const userSchema = new mongoose.Schema({
   infoFacturacion: {
     rfc: String,
     direccion: String
-  }
+  },
+  carrito: [{
+    producto: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    cantidad: { type: Number, default: 1 }
+  }]
 }, { timestamps: true });
 
 export default mongoose.model('User', userSchema);

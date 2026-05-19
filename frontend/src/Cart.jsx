@@ -2,27 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 function Cart() {
-  const items = [
-    {
-      id: "1",
-      nombre: "Nike Air Force 1 '07",
-      categoria: "Calzado de hombre",
-      precio: 2399,
-      talla: "27.5",
-      cantidad: 1,
-      img: "https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco/b7d9211c-26e7-431a-ac24-b0540fb3c00f/AIR+FORCE+1+%2707.png"
-    },
-    {
-      id: "2",
-      nombre: "Adidas Samba OG",
-      categoria: "Originals",
-      precio: 2199,
-      talla: "28",
-      cantidad: 1,
-      img: "https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/3bb35945121a47bea3c7f99949358932_9366/Tenis_Samba_OG_Blanco_B75806_01_standard.jpg"
-    }
-  ];
-
+  
   const subtotal = items.reduce((acc, item) => acc + item.precio, 0);
   const envio = 0; // Envío gratis estilo Nike Members
 
