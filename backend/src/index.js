@@ -5,13 +5,17 @@ import connectDB from './config/db.js';
 import Product from './models/Product.js'; // Orué
 import User from './models/User.js'; // Orué
 
-
 dotenv.config();
 connectDB();
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.use((req, res, next) => {
+  console.log(`Petición recibida: ${req.method} ${req.url}`);
+  next();
+});
 
 // ==========================================
 //ENDPOINTS DE LA API 
@@ -231,6 +235,84 @@ app.delete('/api/shipments/:id', async (req, res) => {
     res.json({ mensaje: "Registro de envío eliminado" });
   } catch (error) {
     res.status(500).json({ mensaje: "Error al eliminar", error });
+  }
+});
+
+// Iniciar Sesión
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Buscamos al usuario por su email
+    const usuario = await User.findOne({ email });
+    
+    if (!usuario || usuario.password !== password) {
+      return res.status(401).json({ mensaje: "Credenciales inválidas" });
+    }
+
+    const usuarioData = usuario.toObject();
+    delete usuarioData.password;
+    
+    res.json({ mensaje: "Sesión iniciada", usuario: usuarioData });
+  } catch (error) {
+    
+    res.status(500).json({ mensaje: "Error en el servidor", error });
+  }
+});
+
+// Agregar un producto al carrito
+app.post('/api/cart', async (req, res) => {
+  try {
+    const { userId, productId, cantidad } = req.body;
+    console.log("DEBUG: Buscando usuario con ID:", userId); // 👈 ¡MIRA ESTO!
+    
+    // Buscamos al usuario en la BD
+    const usuario = await User.findById(userId);
+    if (!usuario) return res.status(404).json({ mensaje: "Usuario no encontrado" });
+
+    // Verificamos si este producto ya estaba en el carrito
+    const itemIndex = usuario.carrito.findIndex(p => p.producto.toString() === productId);
+
+    if (itemIndex > -1) {
+      // Si ya existía, solo le sumamos la cantidad extra
+      usuario.carrito[itemIndex].cantidad += cantidad;
+    } else {
+      // Si es nuevo, lo metemos al final del arreglo
+      usuario.carrito.push({ producto: productId, cantidad });
+    }
+
+    // Guardamos el cambio
+    await usuario.save();
+    res.json({ mensaje: "Agregado al carrito exitosamente", carrito: usuario.carrito });
+  } catch (error) {
+    console.error("ERROR DETALLADO:", error); // 👈 ESTO TE DIRÁ QUÉ PASÓ EN REALIDAD
+    res.status(500).json({ mensaje: "Error al actualizar el carrito", error });
+  }
+});
+
+// Obtener el carrito completo para la vista Cart.jsx
+app.get('/api/cart/:userId', async (req, res) => {
+  try {
+    const usuario = await User.findById(req.params.userId).populate('carrito.producto');
+    if (!usuario) return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    
+    res.json(usuario.carrito);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al traer el carrito", error });
+  }
+});
+
+app.put('/api/cart', async (req, res) => {
+  const { userId, productId, cantidad } = req.body;
+  const usuario = await User.findById(userId);
+  const item = usuario.carrito.find(p => p.producto.toString() === productId);
+
+  if (item) {
+    item.cantidad = cantidad; // Actualizamos la cantidad
+    await usuario.save();
+    res.json({ mensaje: "Carrito actualizado", carrito: usuario.carrito });
+  } else {
+    res.status(404).json({ mensaje: "Producto no encontrado en carrito" });
   }
 });
 
