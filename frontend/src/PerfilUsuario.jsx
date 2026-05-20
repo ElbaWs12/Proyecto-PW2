@@ -8,8 +8,7 @@ function PerfilUsuario() {
 
   // Historial de compras simulado (puedes dejarlo estático para el avance de la entrega)
   const historialCompras = [
-    { id: "3421", fecha: "15 Mayo 2026", total: 2399, estatus: "Entregado", item: "Nike Air Force 1 '07" },
-    { id: "2988", fecha: "02 Mar 2026", total: 2199, estatus: "Entregado", item: "Adidas Samba OG" }
+    
   ];
 
   useEffect(() => {

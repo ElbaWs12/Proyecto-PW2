@@ -285,7 +285,6 @@ app.post('/api/cart', async (req, res) => {
     await usuario.save();
     res.json({ mensaje: "Agregado al carrito exitosamente", carrito: usuario.carrito });
   } catch (error) {
-    console.error("ERROR DETALLADO:", error); // 👈 ESTO TE DIRÁ QUÉ PASÓ EN REALIDAD
     res.status(500).json({ mensaje: "Error al actualizar el carrito", error });
   }
 });
@@ -302,6 +301,7 @@ app.get('/api/cart/:userId', async (req, res) => {
   }
 });
 
+// Actualizar el carrito (por ejemplo, cambiar la cantidad de un producto específico)
 app.put('/api/cart', async (req, res) => {
   const { userId, productId, cantidad } = req.body;
   const usuario = await User.findById(userId);
@@ -313,6 +313,27 @@ app.put('/api/cart', async (req, res) => {
     res.json({ mensaje: "Carrito actualizado", carrito: usuario.carrito });
   } else {
     res.status(404).json({ mensaje: "Producto no encontrado en carrito" });
+  }
+});
+
+// Eliminar un objeto del carrito
+app.delete('/api/cart/:userId/:cartItemId', async (req, res) => {
+  try {
+    const { userId, cartItemId } = req.params;
+
+    const usuarioActualizado = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { carrito: { _id: cartItemId } } },
+      { new: true }
+    ).populate('carrito.producto');
+
+    if (!usuarioActualizado) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+
+    res.json(usuarioActualizado.carrito);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al eliminar el producto del carrito", error });
   }
 });
 
