@@ -1,0 +1,342 @@
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import connectDB from './config/db.js';
+import Product from './models/Product.js'; // Orué
+import User from './models/User.js'; // Orué
+
+dotenv.config();
+connectDB();
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.use((req, res, next) => {
+  console.log(`Petición recibida: ${req.method} ${req.url}`);
+  next();
+});
+
+// ==========================================
+//ENDPOINTS DE LA API 
+// ==========================================
+
+// Obtener todos los productos - Orué
+app.get('/api/products', async (req, res) => {
+  const products = await Product.find();
+  res.json(products);
+});
+
+// Obtener UN producto - Orué
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const producto = await Product.findById(req.params.id);
+    if (!producto) return res.status(404).json({ mensaje: "No encontrado" });
+    res.json(producto);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error en el servidor" });
+  }
+});
+
+// Agregar un producto nuevo - Orué
+app.post('/api/products', async (req, res) => {
+  const nuevoProducto = new Product(req.body);
+  await nuevoProducto.save();
+  res.status(201).json(nuevoProducto);
+});
+
+// Actualizar un producto por su ID
+app.put('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params; // Obtenemos el id de la URL
+    const datosActualizados = req.body; // Los nuevos datos vienen en el body
+
+    const productoEditado = await Product.findByIdAndUpdate(
+      id, 
+      datosActualizados, 
+      { new: true } // Esta opción devuelve el producto ya modificado
+    );
+
+    if (!productoEditado) {
+      return res.status(404).json({ mensaje: "Producto no encontrado" });
+    }
+
+    res.json(productoEditado);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al actualizar", error });
+  }
+});
+
+// DELETE producto - Orué
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const productoEliminado = await Product.findByIdAndDelete(id);
+
+    if (!productoEliminado) {
+      return res.status(404).json({ mensaje: "El producto no existe" });
+    }
+
+    res.json({ mensaje: "Producto eliminado correctamente", productoEliminado });
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al eliminar", error });
+  }
+});
+
+// Obtener datos de un usuario - Orué
+app.get('/api/users/:id', async (req, res) => {
+  try {
+    const usuario = await User.findById(req.params.id).select('-password');
+    
+    if (!usuario) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+    
+    res.json(usuario);
+  } catch (error) {
+    // Si el ID tiene un formato inválido, caerá aquí
+    console.error("Error al obtener usuario:", error);
+    res.status(400).json({ mensaje: "ID de usuario inválido o error en el servidor" });
+  }
+});
+
+// Registrar un usuario nuevo
+app.post('/api/users', async (req, res) => {
+  try {
+    const nuevoUsuario = new User(req.body);
+    const usuarioGuardado = await nuevoUsuario.save();
+    
+    // Convertimos a objeto para quitar la contraseña de la respuesta por seguridad
+    const respuesta = usuarioGuardado.toObject();
+    delete respuesta.password;
+    
+    res.status(201).json(respuesta);
+  } catch (error) {
+    console.error("Error al registrar usuario:", error);
+    if (error.code === 11000) { // Error de MongoDB para correos duplicados
+      return res.status(400).json({ mensaje: "El correo electrónico ya está registrado." });
+    }
+    res.status(400).json({ mensaje: "Error al crear la cuenta.", error });
+  }
+});
+
+// Actualizar datos de un usuario - Orué
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const datosNuevos = req.body;
+
+    // .select('-password') asegura que no regresemos la contraseña en la respuesta
+    const usuarioEditado = await User.findByIdAndUpdate(
+      id, 
+      datosNuevos, 
+      { new: true, runValidators: true } 
+    ).select('-password');
+
+    if (!usuarioEditado) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+
+    res.json(usuarioEditado);
+  } catch (error) {
+    console.error("Error al actualizar:", error);
+    res.status(500).json({ mensaje: "Error interno al actualizar usuario", error });
+  }
+});
+
+// DELETE de usuario - Orué
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const usuarioBorrado = await User.findByIdAndDelete(id);
+
+    if (!usuarioBorrado) {
+      return res.status(404).json({ mensaje: "El usuario que intentas borrar no existe" });
+    }
+
+    res.json({ mensaje: "Usuario eliminado de la plataforma correctamente" });
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al intentar eliminar el usuario", error });
+  }
+});
+
+// Registro de envío - Orué
+app.post('/api/shipments', async (req, res) => {
+  try {
+    const { orderId, carrier, trackingNumber, estimatedDelivery } = req.body;
+    
+    const nuevoEnvio = new Shipment({
+      orderId,
+      carrier,
+      trackingNumber,
+      estimatedDelivery,
+      status: 'Enviado',
+      history: [{ status: 'Enviado', description: 'El paquete ha salido de nuestro almacén.' }]
+    });
+
+    await nuevoEnvio.save();
+    res.status(201).json(nuevoEnvio);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al crear el envío", error });
+  }
+});
+
+// Obtener todos los envíos - Orué
+app.get('/api/shipments', async (req, res) => {
+  try {
+    const shipments = await Shipment.find().populate('orderId');
+    res.json(shipments);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al traer los envíos", error });
+  }
+});
+
+// Obtener un envío por ID - Orué
+app.get('/api/shipments/:id', async (req, res) => {
+  try {
+    const shipment = await Shipment.findById(req.params.id);
+    if (!shipment) return res.status(404).json({ mensaje: "Envío no encontrado" });
+    res.json(shipment);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error en el servidor", error });
+  }
+});
+
+// Actualizar el estado del envío - Orué
+app.put('/api/shipments/:id', async (req, res) => {
+  try {
+    // Si envías un nuevo evento en el body, lo "pusheamos" al arreglo de history
+    const { status, location, description } = req.body;
+    
+    const updateData = { ...req.body };
+    
+    // Lógica para no borrar el historial, sino agregarle eventos
+    const shipmentActualizado = await Shipment.findByIdAndUpdate(
+      req.params.id,
+      { 
+        $set: updateData,
+        $push: status ? { history: { status, location, description } } : {} 
+      },
+      { new: true }
+    );
+
+    if (!shipmentActualizado) return res.status(404).json({ mensaje: "Envío no encontrado" });
+    res.json(shipmentActualizado);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al actualizar el envío", error });
+  }
+});
+
+// DELETE de envío - Orué
+app.delete('/api/shipments/:id', async (req, res) => {
+  try {
+    const shipmentBorrado = await Shipment.findByIdAndDelete(req.params.id);
+    if (!shipmentBorrado) return res.status(404).json({ mensaje: "El registro no existe" });
+    res.json({ mensaje: "Registro de envío eliminado" });
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al eliminar", error });
+  }
+});
+
+// Iniciar Sesión
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Buscamos al usuario por su email
+    const usuario = await User.findOne({ email });
+    
+    if (!usuario || usuario.password !== password) {
+      return res.status(401).json({ mensaje: "Credenciales inválidas" });
+    }
+
+    const usuarioData = usuario.toObject();
+    delete usuarioData.password;
+    
+    res.json({ mensaje: "Sesión iniciada", usuario: usuarioData });
+  } catch (error) {
+    
+    res.status(500).json({ mensaje: "Error en el servidor", error });
+  }
+});
+
+// Agregar un producto al carrito
+app.post('/api/cart', async (req, res) => {
+  try {
+    const { userId, productId, cantidad } = req.body;
+    console.log("DEBUG: Buscando usuario con ID:", userId); // 👈 ¡MIRA ESTO!
+    
+    // Buscamos al usuario en la BD
+    const usuario = await User.findById(userId);
+    if (!usuario) return res.status(404).json({ mensaje: "Usuario no encontrado" });
+
+    // Verificamos si este producto ya estaba en el carrito
+    const itemIndex = usuario.carrito.findIndex(p => p.producto.toString() === productId);
+
+    if (itemIndex > -1) {
+      // Si ya existía, solo le sumamos la cantidad extra
+      usuario.carrito[itemIndex].cantidad += cantidad;
+    } else {
+      // Si es nuevo, lo metemos al final del arreglo
+      usuario.carrito.push({ producto: productId, cantidad });
+    }
+
+    // Guardamos el cambio
+    await usuario.save();
+    res.json({ mensaje: "Agregado al carrito exitosamente", carrito: usuario.carrito });
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al actualizar el carrito", error });
+  }
+});
+
+// Obtener el carrito completo para la vista Cart.jsx
+app.get('/api/cart/:userId', async (req, res) => {
+  try {
+    const usuario = await User.findById(req.params.userId).populate('carrito.producto');
+    if (!usuario) return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    
+    res.json(usuario.carrito);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al traer el carrito", error });
+  }
+});
+
+// Actualizar el carrito (por ejemplo, cambiar la cantidad de un producto específico)
+app.put('/api/cart', async (req, res) => {
+  const { userId, productId, cantidad } = req.body;
+  const usuario = await User.findById(userId);
+  const item = usuario.carrito.find(p => p.producto.toString() === productId);
+
+  if (item) {
+    item.cantidad = cantidad; // Actualizamos la cantidad
+    await usuario.save();
+    res.json({ mensaje: "Carrito actualizado", carrito: usuario.carrito });
+  } else {
+    res.status(404).json({ mensaje: "Producto no encontrado en carrito" });
+  }
+});
+
+// Eliminar un objeto del carrito
+app.delete('/api/cart/:userId/:cartItemId', async (req, res) => {
+  try {
+    const { userId, cartItemId } = req.params;
+
+    const usuarioActualizado = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { carrito: { _id: cartItemId } } },
+      { new: true }
+    ).populate('carrito.producto');
+
+    if (!usuarioActualizado) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+
+    res.json(usuarioActualizado.carrito);
+  } catch (error) {
+    res.status(500).json({ mensaje: "Error al eliminar el producto del carrito", error });
+  }
+});
+
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`SERVER ON ${PORT}`));
