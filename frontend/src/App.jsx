@@ -4,6 +4,7 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import { Routes, Route, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import Footer from './Footer';
 
 //Pantallas
 import UserProfile from './PerfilUsuario'; //Importar la vista UserProfile del archivo que la contiene - Orué
@@ -82,6 +83,7 @@ const Navbar = () => {
   );
 };
 
+
 // --- MAIN ---
 const Home = () => {
   const [productos, setProductos] = useState([]);
@@ -141,6 +143,8 @@ function App() {
         <Route path="/profile/:userId" element={<UserProfile />} />
         <Route path="/login" element={<Auth />} />
       </Routes>
+
+      <Footer />
     </div>
   );
 }
